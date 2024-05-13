@@ -6,14 +6,14 @@ const myTimer = (timer, isString) => {
     let stop = Date.parse(deadline);
     let dif = stop - now;
 
-// если дедлайн прошел и период не указан, отображаться будут нули из разметки
-// если таймер строчный, то будет отображаться строка с нулями
-if (dif < 0 && !period) {
-    if (isString) {
-        timer.querySelector('.timer__body').textContent = `00 c. | 00 м.`;
-    }
-    return;
-// если дедлайн прошел, но указан период обновления, то он будет добавляться до тех пор, пока не будет назначен на будущее
+    // если дедлайн прошел и период не указан, отображаться будут нули из разметки
+    // если таймер строчный, то будет отображаться строка с нулями
+    if (dif < 0 && !period) {
+        if (isString) {
+            timer.querySelector('.timer__body').textContent = `00 c. | 00 м.`;
+        }
+        return;
+        // если дедлайн прошел, но указан период обновления, то он будет добавляться до тех пор, пока не будет назначен на будущее
     } else if (dif < 0 && period) {
         do {
             stop = new Date(stop);
@@ -21,11 +21,11 @@ if (dif < 0 && !period) {
             dif = stop - now;
         } while (dif < 0);
     }
-// рассчет
+    // рассчет
     const days = String(Math.floor(dif / (1000 * 60 * 60 * 24))).padStart(2, "0");
     const hours = String(Math.floor(dif / (1000 * 60 * 60)) % 24).padStart(2, "0");
     const minutes = String(Math.round(dif / (1000 * 60)) % 60).padStart(2, "0");
-// отображение для строковых таймеров
+    // отображение для строковых таймеров
     if (isString) {
         if (days > 0) {
             timer.querySelector('.timer__body').textContent = `${days} д. | ${hours} ч. | ${minutes} м.`;
@@ -33,11 +33,11 @@ if (dif < 0 && !period) {
             timer.querySelector('.timer__body').textContent = `${hours} ч. | ${minutes} м.`;
         }
     } else {
-// поиск элементов внутри таймера для вывода
+        // поиск элементов внутри таймера для вывода
         const daysElement = timer.querySelector(`.days-${postfix}`);
         const hoursElement = timer.querySelector(`.hours-${postfix}`);
         const minutesElement = timer.querySelector(`.minutes-${postfix}`);
-// вывод в нестроковый таймер
+        // вывод в нестроковый таймер
         if (daysElement && hoursElement && minutesElement) {
             daysElement.textContent = days;
             hoursElement.textContent = hours;
@@ -70,7 +70,22 @@ const timersSettings = {
 
 //  регулярное выражение для поиска класса, который определяет название файла с настройками
 const re = /\bjs-[a-zA-Z0-9]+\b/;
+
+// кусочек для смены дедлайна, когда не удобно менять руками
+// по какому ключу менять
+const gameToChangeDeadline = "tb";
+// на какую дату менять
+const newDate = "2024-06-09 10:00";
+const deadlineToChange = Date.parse(timersSettings[gameToChangeDeadline].deadline);
+
+// имплементация по загрузке
 document.addEventListener('DOMContentLoaded', () => {
+    //проверка на то, не прошла ли еще дата, которую надо будет поменять
+    //    const tempToday = new Date();
+    //    if (deadlineToChange < tempToday.getTime()) {
+    //замена значения в объекте
+    //        timersSettings[gameToChangeDeadline].deadline = newDate;
+    //    }
     const timers = [...document.querySelectorAll('[data-timer="true"]')];
     timers.forEach((timer) => {
         const timerClass = [...timer.classList].filter((item) => item.match(re)).join().slice(3);
@@ -93,17 +108,3 @@ document.addEventListener('DOMContentLoaded', () => {
         setInterval(() => { myTimer(timer) }, 10000);
     });
 })
-
-// если нужно заменить время в таймере в неудобное время, то ему нужно присвоить соответствующий класс и он поменяется автоматически
-
-// document.addEventListener('DOMContentLoaded', () => {
-//     const newDeadline = "2024-05-31 21:45";
-//     const checkNow = new Date();
-//     const timers = [...document.querySelectorAll('.js-change-deadline')];
-//     timers.forEach((item) => {
-//         const currentDedline = new Date(item.dataset.deadline);
-//         if (checkNow.getTime() >= currentDedline.getTime()) {
-//             item.dataset.deadline = newDeadline;
-//         }
-//     })
-// })
