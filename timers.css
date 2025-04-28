@@ -1,9 +1,16 @@
 .timer {
     font-family: 'Inter', sans-serif;
+}
+.timer--black {
     color: #212121;
 }
 
+.timer--white {
+    color: #fff;
+}
+
 .timer__header {
+    font-weight: 500;
     line-height: 1;
 }
 
@@ -27,6 +34,7 @@
 }
 
 .timer__item {
+    color: #212121;
     background-color: #fff;
     border-radius: 5px;
     line-height: .6;
@@ -35,7 +43,7 @@
 }
 
 .timer__label {
-    line-height: 1.5;
+    line-height: 1.2;
 }
 
 /* desktop slider timers */
@@ -47,7 +55,7 @@
 
 .timer__header_desk-slider {
     margin-bottom: 10px;
-    font-size: 20px;
+    font-size: 18px;
 }
 
 .timer__body_desk-slider {

@@ -1,110 +1,180 @@
-const myTimer = (timer, isString) => {
-    const postfix = timer.dataset.postfix;
-    const deadline = timer.dataset.deadline;
-    const period = Number(timer.dataset.period) || 0;
-    const now = Date.parse(new Date());
-    let stop = Date.parse(deadline);
-    let dif = stop - now;
-
-    // если дедлайн прошел и период не указан, отображаться будут нули из разметки
-    // если таймер строчный, то будет отображаться строка с нулями
-    if (dif < 0 && !period) {
-        if (isString) {
-            timer.querySelector('.timer__body').textContent = `00 c. | 00 м.`;
-        }
-        return;
-        // если дедлайн прошел, но указан период обновления, то он будет добавляться до тех пор, пока не будет назначен на будущее
-    } else if (dif < 0 && period) {
-        do {
-            stop = new Date(stop);
-            stop = stop.setDate(stop.getDate() + period);
-            dif = stop - now;
-        } while (dif < 0);
+class MyTimer {
+    constructor(timer, name) {
+      if (!this.timersConfig.hasOwnProperty(name)) return;
+      this.timer = timer;
+      this.deadline = this.timersConfig[name].deadline;
+      this.nextDeadline = this.timersConfig[name].nextDeadline ? this.getNextDate(this.timersConfig[name].nextDeadline) : false;
+      this.period = Number(this.timersConfig[name].period) || 0;
+      this.updateData();
+  
+      let continueCount = true;
+  
+      if (this.dif < 0) {
+        continueCount = this.onZeroDif();
+      }
+  
+      if (continueCount) {
+        this.init();
+      }
     }
-    // рассчет
-    const days = String(Math.floor(dif / (1000 * 60 * 60 * 24))).padStart(2, "0");
-    const hours = String(Math.floor(dif / (1000 * 60 * 60)) % 24).padStart(2, "0");
-    const minutes = String(Math.round(dif / (1000 * 60)) % 60).padStart(2, "0");
-    // отображение для строковых таймеров
-    if (isString) {
-        if (days > 0) {
-            timer.querySelector('.timer__body').textContent = `${days} д. | ${hours} ч. | ${minutes} м.`;
-        } else {
-            timer.querySelector('.timer__body').textContent = `${hours} ч. | ${minutes} м.`;
-        }
+  
+    timersConfig = {
+      ftw: {
+        deadline: "2024-08-13 20:00",
+        period: 168
+      },
+      sfn: {
+        deadline: "2025-03-28 22:00",
+        nextDeadline: "2025-04-30 22:00, 2025-05-30 22:00, 2025-06-30 22:00"
+      },
+      tb: {
+        deadline: "2025-03-23 10:00",
+        nextDeadline: "2025-04-20 10:00, 2025-05-25 10:00, 2025-06-22 10:00"
+      },
+      fts: {
+        deadline: "2025-04-07 21:00",
+        nextDeadline: "2025-05-09 21:00, 2025-06-09 21:00"
+      },
+      ld: {
+        deadline: "2025-03-25 20:59:59",
+        nextDeadline: "2025-05-25, 2025-06-22"
+      },
+      lm: {
+        deadline: "2025-05-31 20:59:59"
+      },
+      mk: {
+        deadline: "2025-03-09 21:59:59",
+        nextDeadline: "2025-05-04, 2025-05-11, 2025-06-06, 2025-06-29"
+      },
+    };
+  
+    init() {
+      this.findElements();
+      this.count();
+      setInterval(() => {
+        this.countDown();
+      }, 1000);
+    }
+  
+    findElements() {
+      if (this.timer.classList.contains("string") || this.timer.classList.contains("ld")) {
+        this.timerType = "string";
+        this.timerBody = this.timer.querySelector(".timer__body");
     } else {
-        // поиск элементов внутри таймера для вывода
-        const daysElement = timer.querySelector(`.days-${postfix}`);
-        const hoursElement = timer.querySelector(`.hours-${postfix}`);
-        const minutesElement = timer.querySelector(`.minutes-${postfix}`);
-        // вывод в нестроковый таймер
-        if (daysElement && hoursElement && minutesElement) {
-            daysElement.textContent = days;
-            hoursElement.textContent = hours;
-            minutesElement.textContent = minutes;
-        }
+        this.timerType = "normal";
+        this.daysOutput = this.timer.querySelector(`.days`);
+        this.hoursOutput = this.timer.querySelector(`.hours`);
+        this.minutesOutput = this.timer.querySelector(`.minutes`);
+      }
     }
-
-}
-
-// объект с настройками - дедлайн и период обновления. 
-// Для таймеров, у которых нет одной даты, которые обновляются раз в какой-то период, все равно нужно указать первую дату, от которой и пойдет отсчет
-// ftw - 4/20, sfn - 6/49, tb - телебинго,     fts - 5/36
-
-const timersSettings = {
-    ftw: {
-        deadline: "2024-04-16 20:00",
-        period: "7",
-    },
-    sfn: {
-        deadline: "2024-05-31 21:45",
-    },
-    tb: {
-        deadline: "2024-05-12 10:00",
-    },
-    fts: {
-        deadline: "2024-04-16 21:00",
-        period: "7",
+  
+    count() {
+      this.days = String(Math.floor(this.dif / (1000 * 60 * 60 * 24))).padStart(
+        2,
+        "0"
+      );
+      this.hours = String(Math.floor(this.dif / (1000 * 60 * 60)) % 24).padStart(
+        2,
+        "0"
+      );
+      this.minutes = String(Math.round(this.dif / (1000 * 60)) % 60).padStart(
+        2,
+        "0"
+      );
+      this.fillInTimer();
     }
-};
-
-//  регулярное выражение для поиска класса, который определяет название файла с настройками
-const re = /\bjs-[a-zA-Z0-9]+\b/;
-
-// кусочек для смены дедлайна, когда не удобно менять руками
-// по какому ключу менять
-const gameToChangeDeadline = "tb";
-// на какую дату менять
-const newDate = "2024-06-09 10:00";
-const deadlineToChange = Date.parse(timersSettings[gameToChangeDeadline].deadline);
-
-// имплементация по загрузке
-document.addEventListener('DOMContentLoaded', () => {
-    //проверка на то, не прошла ли еще дата, которую надо будет поменять
-    //    const tempToday = new Date();
-    //    if (deadlineToChange < tempToday.getTime()) {
-    //замена значения в объекте
-    //        timersSettings[gameToChangeDeadline].deadline = newDate;
-    //    }
-    const timers = [...document.querySelectorAll('[data-timer="true"]')];
-    timers.forEach((timer) => {
-        const timerClass = [...timer.classList].filter((item) => item.match(re)).join().slice(3);
-
-        // если соответствующий класс есть, то таймеру присваиваются атрибуты дедлайна и, если есть, периода обновления
-        if (timerClass) {
-            timer.setAttribute("data-deadline", `${timersSettings[timerClass].deadline}`);
-            if (timersSettings[timerClass].period) {
-                timer.setAttribute("data-period", `${timersSettings[timerClass]?.period}`);
-            }
+  
+    countDown() {
+      this.now = Date.parse(new Date());
+      this.dif = this.dif - 1000;
+      let continueCount = true;
+      if (this.dif < 0) {
+        continueCount = this.onZeroDif();
+      }
+  
+      if (continueCount) {
+        this.count();
+      }
+  
+      return;
+    }
+  
+    onZeroDif() {
+      if (!this.period && !this.nextDeadline) {
+        return false;
+      }
+      if (this.nextDeadline) {
+        this.deadline = this.nextDeadline;
+        this.updateData();
+        return true;
+      }
+      if (this.period) {
+        this.upToDateTimer().then(() => this.updateData());
+        return true;
+      }
+      return false;
+    }
+  
+    updateData() {
+      this.now = Date.parse(new Date());
+      this.stop = Date.parse(this.deadline);
+      this.dif = this.stop - this.now;
+    }
+  
+    fillInTimer() {
+      requestAnimationFrame(() => {
+        if (this.timerType && this.timerType !== "normal") {
+          let separtor = this.timerType === "ld" ? "" : "|";
+          this.timerBody.textContent = `${
+            this.days > 0 ? this.days + "д. " + separtor + " " : ""
+          }${this.hours} ч. ${separtor} ${this.minutes} м.`;
+        } else if (this.daysOutput && this.hoursOutput && this.minutesOutput) {
+          this.daysOutput.textContent = this.days;
+          this.hoursOutput.textContent = this.hours;
+          this.minutesOutput.textContent = this.minutes;
         }
-
-        // если таймер имеет идентификатор строчного таймера, то его заполнение происходит через строку
-        const isStringTimer = /string-timer/.test(timer.classList);
-        if (isStringTimer) {
-            myTimer(timer, isStringTimer)
+      });
+    }
+  
+    getNextDate(dates) {
+      let i = 0;
+      let dateArr = dates.split(/,\s+/gim);
+      let now = Date.parse(new Date());
+      let stop = Date.parse(dateArr[i]);
+      let dif = stop - now;
+  
+      function checkNextDate() {
+        do {
+          stop = Date.parse(dateArr[i]);
+          dif = stop - now;
+          i++;
+        } while (i < dateArr.length && dif < 0);
+        if (dif <= 0) {
+          return "no more dates, we are still < 0";
         } else {
-            myTimer(timer, false);
+          return stop;
         }
-        setInterval(() => { myTimer(timer) }, 10000);
+      }
+      return new Date(checkNextDate());
+    }
+    upToDateTimer() {
+      return new Promise((resolve) => {
+        let step = Number(this.period) * 60 * 60 * 1000;
+        do {
+          this.stop += step;
+          this.dif = this.stop - this.now;
+        } while (this.dif < 0);
+        if (this.dif > 0) {
+          resolve();
+        }
+      });
+    }
+  }
+  
+  document.addEventListener("DOMContentLoaded", () => {
+    const timers = [...document.querySelectorAll("[data-timer-name]")];
+    timers.forEach((timer) => {
+      const timerClass = timer.dataset.timerName;
+      new MyTimer(timer, timerClass);
     });
-})
+  });
